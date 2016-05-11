@@ -1,6 +1,3 @@
-/**
- * copy from leveldb
- */ 
 #ifndef UTIL_H_
 #define UTIL_H_
 
@@ -10,6 +7,9 @@
 #include <sys/time.h>
 #include <time.h>
 
+/**
+ * copy from leveldb
+ */ 
 class PosixLogger {
 private:
 	FILE* file_;
