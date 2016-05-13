@@ -13,6 +13,12 @@ static uint64_t gettid() {
 	return thread_id;
 }
 
+uint64_t MurmurHash64A ( const void * key, int len, uint64_t seed );
+uint64_t hash(const void * key, int len) {
+	return MurmurHash64A(key,len,0);
+}
+
+
 void PosixLogger::Logv(const char* format, ...) {
 	const uint64_t thread_id = gettid();
 

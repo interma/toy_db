@@ -3,9 +3,11 @@
 
 #include <stdint.h>
 #include <string>
+#include <map>
 
 //using namespace std;
 
+class ValEntry;
 /**
  * a bitcask db storage, support:get(),set(),del()
  */ 
@@ -14,11 +16,11 @@ class BitcaskDB {
 		int open(const char *path);
 		int close();
 
-		int set(const char *key, char *value, size_t vlen);
-		int get(const char *key, std::string *value);
-		int del(const char *key);
+		int set(const char *key, size_t klen, char *val, size_t vlen);
+		int get(const char *key, size_t klen, std::string *val);
+		int del(const char *key, size_t klen);
 	private:
-	
+		std::map<uint64_t, ValEntry> mem_dict_;
 };
 
 #endif

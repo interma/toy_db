@@ -14,3 +14,4 @@
 #include <dirent.h>
 
 #include "bitcask.h"
+#include "util.h"

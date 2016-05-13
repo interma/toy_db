@@ -12,6 +12,7 @@ all : $(OBJ) output;
 $(OBJ) : \
 	main.o \
 	util.o \
+	murhash2.o \
 	bitcask.o \
 
 	$(GCC) -o $@ $^  $(INCLUDE_PATH) $(LIB_PATH) 
