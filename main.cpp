@@ -28,6 +28,7 @@ int main (int argc, char **argv)
 	db.set(key1,strlen(key1),val,strlen(val));
 	db.set(key2,strlen(key2),val,strlen(val));
 	
+	/*	
 	std::string buf;
 	db.get(key1,strlen(key1),&buf);
 	printf("get key value[%s]\n",buf.c_str());
@@ -35,6 +36,7 @@ int main (int argc, char **argv)
 	db.del(key1,strlen(key1));
 	int ret = db.get(key1,strlen(key1),&buf);
 	assert(ret == 1);
-	
+	*/
+
 	return 0;
 }

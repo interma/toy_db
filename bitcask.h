@@ -49,6 +49,10 @@ class BitcaskDB {
 		BitcaskDB(const BitcaskDB&);
 		void operator=(const BitcaskDB&);
 
+
+		int write_record(const char *key, size_t klen, char *val, size_t vlen);
+		int	read_record(uint64_t offset, size_t len, std::string *val);
+
 };
 
 #endif

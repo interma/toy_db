@@ -14,6 +14,7 @@
 #include <dirent.h>
 #include <assert.h>
 #include <string>
+#include <unistd.h>
 
 #include "bitcask.h"
 #include "util.h"
@@ -55,10 +56,57 @@ BitcaskDB::~BitcaskDB() {
 }
 
 int BitcaskDB::set(const char *key, size_t klen, char *val, size_t vlen) {
+	ValEntry entry;
+	entry.len = klen+vlen+sizeof(size_t)*2;
+	//use key hash64 as sign 
+	uint64_t sign = hash(key, klen);
+
+	pthread_mutex_lock(&lock_);
+	//get offset
+	entry.offset = data_offset_;
+	data_offset_ += entry.len;
+	
+	//write data
+	write_record(key,klen,val,vlen);
+
+	//write map
+	mem_dict_[sign] = entry;	
+
+	pthread_mutex_unlock(&lock_);
+	return 0;
+}
+
+int BitcaskDB::write_record(const char *key, size_t klen, char *val, size_t vlen) {
+	write(data_fd_, &klen, sizeof(klen));
+	write(data_fd_, &vlen, sizeof(vlen));
+	write(data_fd_, key, klen);
+	write(data_fd_, val, vlen);
+	//syncfs(data_fd_);
 	return 0;
 }
 
 int BitcaskDB::get(const char *key, size_t klen, std::string *val) {
+	val->clear();
+	//use key hash64 as sign 
+	uint64_t sign = hash(key, klen);
+
+	pthread_mutex_lock(&lock_);
+	//get entry
+	Map::iterator it = mem_dict_.find(sign);
+	if (it == mem_dict_.end())
+		return 1; //key not exist
+	uint64_t offset = it->second.offset;
+	size_t len = it->second.len;
+	pthread_mutex_unlock(&lock_);
+
+	read_record(offset,len,val);
+
+	return 0;
+}
+
+int	BitcaskDB::read_record(uint64_t offset, size_t len, std::string *val) {
+	//mmap read or buf pread?
+	 
 	return 0;
 }
 
