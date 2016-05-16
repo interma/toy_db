@@ -8,6 +8,9 @@
 #include <map>
 #include "util.h"
 
+
+const uint32_t READ_BUF_SIZE = 32*1024;
+
 //using namespace std;
 
 /**

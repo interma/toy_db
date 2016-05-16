@@ -86,7 +86,6 @@ int BitcaskDB::write_record(const char *key, size_t klen, char *val, size_t vlen
 }
 
 int BitcaskDB::get(const char *key, size_t klen, std::string *val) {
-	val->clear();
 	//use key hash64 as sign 
 	uint64_t sign = hash(key, klen);
 
@@ -98,15 +97,44 @@ int BitcaskDB::get(const char *key, size_t klen, std::string *val) {
 	uint64_t offset = it->second.offset;
 	size_t len = it->second.len;
 	pthread_mutex_unlock(&lock_);
-
-	read_record(offset,len,val);
+	
+	//read data file
+	int ret = read_record(offset,len,val);
+	if (ret < 0) {
+		logger_->Logv("W read data fail[%lld][%lld]", offset, len);
+		return -1;
+	}
 
 	return 0;
 }
 
 int	BitcaskDB::read_record(uint64_t offset, size_t len, std::string *val) {
+	val->clear();
 	//mmap read or buf pread?
-	 
+	char read_buf[READ_BUF_SIZE];
+
+	while (len > 0) {
+		size_t need_read = len>READ_BUF_SIZE? READ_BUF_SIZE:len;
+		logger_->Logv("D loop read data [%lld][%lld]", offset, len);
+		ssize_t r = pread(data_fd_, read_buf, need_read, static_cast<off_t>(offset));
+		if (r < 0)
+			return -1;
+		//jump to val
+		if (offset == 0) {
+			size_t klen = 0;
+			memcpy(&klen, read_buf, sizeof(klen));
+			//printf("keylen:%d\n", klen);		
+			size_t head_key_len = sizeof(size_t)*2+klen;
+			assert(head_key_len < READ_BUF_SIZE);
+			val->append(read_buf+head_key_len, r-head_key_len);	
+		}
+		else {
+			val->append(read_buf, r);	
+		}
+		len -= r;
+		offset += r;
+	}
+
 	return 0;
 }
 
