@@ -35,15 +35,22 @@ int BitcaskDB::open() {
 	//data file
 	string data_path(db_path_);
 	data_path.append("data");	
-	//TODO recover from data
 	data_fd_ = ::open(data_path.c_str(), O_CREAT | O_RDWR);
+	//data_fd_ = ::open(data_path.c_str(), O_RDWR);
 	if (data_fd_ < 0) {
-		perror("open data file fail");
+		logger_->Logv("F open data fail\n");
 		return -1;
 	}
 
 	//var
 	pthread_mutex_init(&lock_, NULL);	
+
+	//TODO recover from data
+	int ret = this->recover(); //recover from redolog(data)	
+	if (ret < 0) {
+		logger_->Logv("F recover data fail\n");
+		return -1;
+	}
 
 	logger_->Logv("N open db\n");
 	return 0;
@@ -66,7 +73,7 @@ int BitcaskDB::set(const char *key, size_t klen, char *val, size_t vlen) {
 	entry.offset = data_offset_;
 	data_offset_ += entry.len;
 	
-	//write data
+	//write datA
 	write_record(key,klen,val,vlen);
 
 	//write map
@@ -80,7 +87,8 @@ int BitcaskDB::write_record(const char *key, size_t klen, char *val, size_t vlen
 	write(data_fd_, &klen, sizeof(klen));
 	write(data_fd_, &vlen, sizeof(vlen));
 	write(data_fd_, key, klen);
-	write(data_fd_, val, vlen);
+	if (val != NULL) //val==NULL && vlen-1 indicate del()
+		write(data_fd_, val, vlen);
 	//syncfs(data_fd_);
 	return 0;
 }
@@ -139,6 +147,21 @@ int	BitcaskDB::read_record(uint64_t offset, size_t len, std::string *val) {
 }
 
 int BitcaskDB::del(const char *key, size_t klen) {
+	//use key hash64 as sign 
+	uint64_t sign = hash(key, klen);
+
+	pthread_mutex_lock(&lock_);
+	
+	//write data
+	write_record(key,klen,NULL,-1);
+	//erase map
+	mem_dict_.erase(sign);	
+
+	pthread_mutex_unlock(&lock_);
+	return 0;
+}
+
+int BitcaskDB::recover() {
 	return 0;
 }
 
