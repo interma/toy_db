@@ -21,8 +21,8 @@ public:
 	void Logv(const char* format, ...);
 };
 
-//uint64_t MurmurHash64A ( const void * key, int len, uint64_t seed );
-uint64_t hash(const void * key, int len);
+uint64_t hash(const void *key, int len);
+uint32_t crc (const void *buf, size_t len);
 
 #endif
 

@@ -18,6 +18,10 @@ uint64_t hash(const void * key, int len) {
 	return MurmurHash64A(key,len,0);
 }
 
+uint32_t crc32 (uint32_t crc, const unsigned char *buf, size_t len);
+uint32_t crc (const void *buf, size_t len) {
+	return crc32(0, reinterpret_cast<const unsigned char *>(buf), len);
+}
 
 void PosixLogger::Logv(const char* format, ...) {
 	const uint64_t thread_id = gettid();

@@ -13,6 +13,7 @@ $(OBJ) : \
 	main.o \
 	util.o \
 	murhash2.o \
+	crc32.o \
 	bitcask.o \
 
 	$(GCC) -o $@ $^  $(INCLUDE_PATH) $(LIB_PATH) 
