@@ -4,7 +4,11 @@
 #include <stdint.h>
 #include <assert.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "util.h"
+
 
 static uint64_t gettid() {
 	pthread_t tid = pthread_self();
@@ -19,8 +23,19 @@ uint64_t hash(const void * key, int len) {
 }
 
 uint32_t crc32 (uint32_t crc, const unsigned char *buf, size_t len);
-uint32_t crc (const void *buf, size_t len) {
-	return crc32(0, reinterpret_cast<const unsigned char *>(buf), len);
+uint32_t crc (const void *buf, size_t len, uint32_t cr) {
+	return crc32(cr, reinterpret_cast<const unsigned char *>(buf), len);
+}
+
+int GetFileSize(const char *fname, uint64_t* size) {
+	struct stat sbuf;
+	if (stat(fname, &sbuf) != 0) {
+		*size = 0;
+		return -1;
+	} else {
+		*size = sbuf.st_size;
+	}
+	return 0;
 }
 
 void PosixLogger::Logv(const char* format, ...) {

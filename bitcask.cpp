@@ -35,8 +35,8 @@ int BitcaskDB::open() {
 	//data file
 	string data_path(db_path_);
 	data_path.append("data");	
-	data_fd_ = ::open(data_path.c_str(), O_CREAT | O_RDWR);
-	//data_fd_ = ::open(data_path.c_str(), O_RDWR);
+	data_fd_ = ::open(data_path.c_str(), O_TRUNC | O_CREAT | O_RDWR);
+	//data_fd_ = ::open(data_path.c_str(), O_CREAT | O_RDWR);
 	if (data_fd_ < 0) {
 		logger_->Logv("F open data fail\n");
 		return -1;
@@ -63,6 +63,7 @@ BitcaskDB::~BitcaskDB() {
 }
 
 int BitcaskDB::set(const char *key, size_t klen, char *val, size_t vlen) {
+	logger_->Logv("N set db key[%s]\n", key);
 	ValEntry entry;
 	entry.len = klen+vlen+sizeof(size_t)*2;
 	//use key hash64 as sign 
@@ -89,7 +90,7 @@ int BitcaskDB::write_record(const char *key, size_t klen, char *val, size_t vlen
 	write(data_fd_, key, klen);
 	if (val != NULL) //val==NULL && vlen-1 indicate del()
 		write(data_fd_, val, vlen);
-	//syncfs(data_fd_);
+	fsync(data_fd_);
 	return 0;
 }
 
@@ -100,8 +101,10 @@ int BitcaskDB::get(const char *key, size_t klen, std::string *val) {
 	pthread_mutex_lock(&lock_);
 	//get entry
 	Map::iterator it = mem_dict_.find(sign);
-	if (it == mem_dict_.end())
+	if (it == mem_dict_.end()){
+		pthread_mutex_unlock(&lock_);
 		return 1; //key not exist
+	}
 	uint64_t offset = it->second.offset;
 	size_t len = it->second.len;
 	pthread_mutex_unlock(&lock_);
@@ -120,7 +123,8 @@ int	BitcaskDB::read_record(uint64_t offset, size_t len, std::string *val) {
 	val->clear();
 	//mmap read or buf pread?
 	char read_buf[READ_BUF_SIZE];
-
+	
+	bool first_block = true;
 	while (len > 0) {
 		size_t need_read = len>READ_BUF_SIZE? READ_BUF_SIZE:len;
 		logger_->Logv("D loop read data [%lld][%lld]", offset, len);
@@ -128,12 +132,14 @@ int	BitcaskDB::read_record(uint64_t offset, size_t len, std::string *val) {
 		if (r < 0)
 			return -1;
 		//jump to val
-		if (offset == 0) {
+		if (first_block) {
+			first_block = false;
 			size_t klen = 0;
 			memcpy(&klen, read_buf, sizeof(klen));
-			//printf("keylen:%d\n", klen);		
 			size_t head_key_len = sizeof(size_t)*2+klen;
 			assert(head_key_len < READ_BUF_SIZE);
+			//printf("keylen:%d\n", klen);		
+			//printf("vallen:%d\n", r-head_key_len);		
 			val->append(read_buf+head_key_len, r-head_key_len);	
 		}
 		else {
@@ -152,6 +158,8 @@ int BitcaskDB::del(const char *key, size_t klen) {
 
 	pthread_mutex_lock(&lock_);
 	
+	//set offset	
+	data_offset_ += klen+sizeof(size_t)*2;
 	//write data
 	write_record(key,klen,NULL,-1);
 	//erase map

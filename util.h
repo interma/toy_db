@@ -22,7 +22,8 @@ public:
 };
 
 uint64_t hash(const void *key, int len);
-uint32_t crc (const void *buf, size_t len);
+uint32_t crc(const void *buf, size_t len, uint32_t cr=0);
+int GetFileSize(const char *fname, uint64_t* size);
 
 #endif
 
