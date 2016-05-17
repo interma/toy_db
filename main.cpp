@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "util.h"
 #include "bitcask.h"
 
@@ -53,10 +57,21 @@ void test_db() {
 	//write big file
 	uint64_t fsize;
 	const char fname[] = "./test/img.png";
+	const char fname_w[] = "./test/img_w.png";
 	ret = GetFileSize(fname, &fsize);
 	assert(ret == 0);
 	printf("\tfile[%s] size[%llu]\n", fname, fsize);
-	//char data_buf[200*1024];
+	char data_buf[200*1024];
+	int fd = open(fname, O_RDONLY);
+	read(fd, data_buf, fsize);	
+	char key4[]= "img";
+	ret = db.set(key4,strlen(key4),data_buf,fsize);
+	assert(ret == 0);
+	ret = db.get(key4,strlen(key4),&buf);
+	assert(ret == 0);
+	int fd_w = open(fname_w, O_CREAT | O_WRONLY);
+	write(fd_w, buf.data(), buf.length());
+	close(fd_w);
 	
 	//write existed key
 	char val2[] = "interma";
