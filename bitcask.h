@@ -20,7 +20,7 @@ const uint32_t READ_BUF_SIZE = 32*1024;
 class BitcaskDB {
 	public:
 		BitcaskDB(const char *db_path):\
-			db_path_(db_path),data_offset_(0),data_fd_(-1),logger_(NULL) {};
+			db_path_(db_path),seqnum_(0),data_offset_(0),data_fd_(-1),logger_(NULL) {};
 		~BitcaskDB();
 		
 		int open();
@@ -43,6 +43,7 @@ class BitcaskDB {
 		Map mem_dict_;
 		
 		std::string db_path_;
+		uint64_t seqnum_;
 		uint64_t data_offset_;
 		int data_fd_;
 		pthread_mutex_t lock_;
@@ -55,7 +56,7 @@ class BitcaskDB {
 		
 		int recover();
 
-		int write_record(const char *key, size_t klen, char *val, size_t vlen);
+		int write_record(uint64_t seq, const char *key, size_t klen, char *val, size_t vlen);
 		int	read_record(uint64_t offset, size_t len, std::string *val);
 
 };
