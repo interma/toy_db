@@ -66,7 +66,7 @@ int BitcaskDB::set(const char *key, size_t klen, char *val, size_t vlen) {
 	logger_->Logv("N set db key[%s]\n", key);
 	ValEntry entry;
 	//record: crc32 seq keylen vallen keydata valdata 
-	entry.len = klen+vlen+sizeof(size_t)*3+sizeof(uint32_t);
+	entry.len = klen+vlen+sizeof(size_t)*2+sizeof(uint32_t)+sizeof(uint64_t);
 	//use key hash64 as sign 
 	uint64_t sign = hash(key, klen);
 
@@ -98,8 +98,10 @@ int BitcaskDB::write_record(uint64_t seq, const char *key, size_t klen, char *va
 	cr = crc(&klen, sizeof(klen), cr);
 	cr = crc(&vlen, sizeof(vlen), cr);
 	cr = crc(key, klen, cr);
+	//printf("crc1:%u\n", cr);		
 	if (val != NULL)
-	cr = crc(val, vlen, cr);
+		cr = crc(val, vlen, cr);
+	//printf("crc2:%u\n", cr);		
 
 	write(data_fd_, &cr, sizeof(cr));
 	write(data_fd_, &seq, sizeof(seq));
@@ -108,7 +110,7 @@ int BitcaskDB::write_record(uint64_t seq, const char *key, size_t klen, char *va
 	write(data_fd_, &vlen, sizeof(vlen));
 	
 	write(data_fd_, key, klen);
-	if (val != NULL) //val==NULL && vlen-1 indicate del()
+	if (val != NULL) //val==NULL && vlen==0 indicate del()
 		write(data_fd_, val, vlen);
 
 	//fsync(data_fd_);
@@ -133,7 +135,7 @@ int BitcaskDB::get(const char *key, size_t klen, std::string *val) {
 	//read data file
 	int ret = read_record(offset,len,val);
 	if (ret < 0) {
-		logger_->Logv("W read data fail[%lld][%lld]", offset, len);
+		logger_->Logv("W read data fail[%lld][%llu]", offset, len);
 		return -1;
 	}
 
@@ -146,6 +148,8 @@ int	BitcaskDB::read_record(uint64_t offset, size_t len, std::string *val) {
 	char read_buf[READ_BUF_SIZE];
 	
 	bool first_block = true;
+	uint32_t cur_cr = 0;
+	uint32_t save_cr = 0;
 	while (len > 0) {
 		size_t need_read = len>READ_BUF_SIZE? READ_BUF_SIZE:len;
 		logger_->Logv("D loop read data [%lld][%lld]", offset, len);
@@ -155,14 +159,26 @@ int	BitcaskDB::read_record(uint64_t offset, size_t len, std::string *val) {
 		//data_buf: crc32 seq keylen vallen keydata valdata 
 		if (first_block) {
 			first_block = false;
-
-			size_t klen = 0;
-			int klen_offset = sizeof(uint32_t)+sizeof(uint64_t);
-			memcpy(&klen, read_buf+klen_offset, sizeof(klen));
-			printf("keylen:%d\n", klen);		
 			
-			size_t val_offset = sizeof(uint32_t)+sizeof(size_t)*3+klen;
-			assert(val_offset < READ_BUF_SIZE);
+			uint64_t seq = 0; 
+			size_t klen = 0;
+			size_t vlen = 0;
+			
+			memcpy(&save_cr, read_buf, sizeof(save_cr));
+			memcpy(&seq, read_buf+sizeof(uint32_t), sizeof(seq));
+			memcpy(&klen, read_buf+sizeof(uint32_t)+sizeof(uint64_t), sizeof(klen));
+			memcpy(&vlen, read_buf+sizeof(uint32_t)+sizeof(uint64_t)+sizeof(size_t), sizeof(vlen));
+			//printf("seq[%llu] klen:%u vlen:%u\n", seq, klen, vlen);		
+			size_t key_offset = sizeof(uint32_t)+sizeof(uint64_t)+sizeof(size_t)*2;
+			size_t val_offset = sizeof(uint32_t)+sizeof(uint64_t)+sizeof(size_t)*2+klen;
+			assert(val_offset < READ_BUF_SIZE); //buf must can hold {key}
+
+			//cal crc
+			cur_cr = crc(&seq, sizeof(seq));
+			cur_cr = crc(&klen, sizeof(klen), cur_cr);
+			cur_cr = crc(&vlen, sizeof(vlen), cur_cr);
+			cur_cr = crc(read_buf+key_offset, klen, cur_cr);
+			//printf("crc1:%u\n", cur_cr);		
 			
 			//jump to val
 			val->append(read_buf+val_offset, r-val_offset);	
@@ -175,9 +191,8 @@ int	BitcaskDB::read_record(uint64_t offset, size_t len, std::string *val) {
 	}
 
 	//check crc32
-	uint32_t save_cr = 0;
-	memcpy(&save_cr, val->data(), sizeof(save_cr));
-	uint32_t cur_cr = crc(val->data(), val->length());
+	cur_cr = crc(val->data(), val->length(), cur_cr); //add val to crc
+	//printf("crc2:%u\n", cur_cr);		
 	if (save_cr != cur_cr) {
 		logger_->Logv("W read_record crc32 not match[%u][%u]", save_cr, cur_cr);
 		return -1;
@@ -193,10 +208,10 @@ int BitcaskDB::del(const char *key, size_t klen) {
 	pthread_mutex_lock(&lock_);
 	
 	//set offset	
-	data_offset_ += klen+sizeof(size_t)*2;
+	data_offset_ += klen+sizeof(size_t)*2+sizeof(uint32_t)+sizeof(uint64_t);
 	uint64_t seq = seqnum_++;
 	//write data
-	write_record(seq,key,klen,NULL,-1);
+	write_record(seq,key,klen,NULL,0); //val==0 indicate del
 	//erase map
 	mem_dict_.erase(sign);	
 
@@ -204,9 +219,58 @@ int BitcaskDB::del(const char *key, size_t klen) {
 	return 0;
 }
 
-int BitcaskDB::recover() {
+int BitcaskDB::print_db(uint64_t cnt) {
+	//record: crc32 seq keylen vallen keydata valdata 
+	string data_path(db_path_);
+	data_path.append("data");	
+	int fd = ::open(data_path.c_str(), O_RDONLY);
+	if (fd < 0) {
+		logger_->Logv("F open data in print_db() fail\n");
+		return -1;
+	}
+		
+
+	char read_buf[READ_BUF_SIZE];
+	
+	printf("==begin print db==\n");
+
+	uint64_t cur_cnt = 0;
+	while (cnt == 0 || cur_cnt < cnt ){
+		uint32_t cr = 0;
+		uint64_t seq = 0; 
+		size_t klen = 0;
+		size_t vlen = 0;
+
+		uint64_t record_head_len = sizeof(uint32_t)+sizeof(uint64_t)+sizeof(size_t)*2;
+		ssize_t r = read(fd, read_buf, record_head_len);
+		if (r <= 0)
+			break;
+
+		memcpy(&cr, read_buf, sizeof(cr));
+		memcpy(&seq, read_buf+sizeof(uint32_t), sizeof(seq));
+		memcpy(&klen, read_buf+sizeof(uint32_t)+sizeof(uint64_t), sizeof(klen));
+		memcpy(&vlen, read_buf+sizeof(uint32_t)+sizeof(uint64_t)+sizeof(size_t), sizeof(vlen));
+
+		//get key
+		r = read(fd, read_buf, klen);
+		if (r <= 0)
+			break;
+		read_buf[klen] = '\0'; 
+		printf("R[%llu] key[%s] crc[%u] seq[%llu] klen[%u] vlen[%u]\n", \
+			cur_cnt++,read_buf,cr,seq,klen,vlen);
+		
+		//jump val
+		lseek(fd, vlen, SEEK_CUR);
+	}
+
+	printf("==end print db, total [%llu] records==\n", cur_cnt);
+	close(fd);
 	return 0;
 }
 
+int BitcaskDB::recover() {
+	//TODO
+	return 0;
+}
 
 

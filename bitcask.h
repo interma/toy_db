@@ -9,7 +9,7 @@
 #include "util.h"
 
 
-const uint32_t READ_BUF_SIZE = 32*1024;
+const uint32_t READ_BUF_SIZE = 32*1024; //read record buf len
 
 //using namespace std;
 
@@ -32,6 +32,11 @@ class BitcaskDB {
 		int set(const char *key, size_t klen, char *val, size_t vlen);
 		int get(const char *key, size_t klen, std::string *val);
 		int del(const char *key, size_t klen);
+		
+		/**
+		 *print data to stdout for debug
+		 */ 
+		int print_db(uint64_t cnt = 0);
 
 	private:
 		struct ValEntry {

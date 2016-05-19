@@ -22,8 +22,10 @@ void test_util() {
 
 	//test crc32
 	char str2[] = "interma123";
-	printf("\tcrc of [%s] is %u\n", str, crc(str,strlen(str)));
-	printf("\tcrc of [%s] is %u\n", str2, crc(str2,strlen(str2)));
+	char str3[] = "interm";
+	char str4[] = "a123";
+	printf("\t?crc of [%s] is %u\n", str, crc(str,strlen(str)));
+	printf("\tlast crc is %u\n", crc(str4,strlen(str4),crc(str3,strlen(str2))) );
 	
 	printf("util test ok\n");
 }
@@ -38,7 +40,7 @@ void test_db() {
 	char key2[] = "key2";
 	char key3[] = "key3";
 	char val[] = "value1++++long";
-	db.set(key1,strlen(key1),val,strlen(val));
+	ret = db.set(key1,strlen(key1),val,strlen(val));
 	ret = db.set(key2,strlen(key2),val,strlen(val));
 	assert (ret == 0);
 
@@ -66,6 +68,8 @@ void test_db() {
 	read(fd, data_buf, fsize);	
 	char key4[]= "img";
 	ret = db.set(key4,strlen(key4),data_buf,fsize);
+
+	
 	assert(ret == 0);
 	ret = db.get(key4,strlen(key4),&buf);
 	assert(ret == 0);
@@ -81,6 +85,7 @@ void test_db() {
 	assert(ret == 0);
 	assert(strcmp(buf.c_str(),val2) == 0);
 
+	db.print_db();
 	printf("db test ok\n");
 }
 
