@@ -21,7 +21,7 @@
 		
 using namespace std;
 
-int BitcaskDB::open() {
+int BitcaskDB::open(bool trunc) {
 	//logger
 	string log_path(db_path_);
 	log_path.append("LOG.log");	
@@ -35,8 +35,11 @@ int BitcaskDB::open() {
 	//data file
 	string data_path(db_path_);
 	data_path.append("data");	
-	data_fd_ = ::open(data_path.c_str(), O_TRUNC | O_CREAT | O_RDWR);
-	//data_fd_ = ::open(data_path.c_str(), O_CREAT | O_RDWR);
+	if (trunc)
+		data_fd_ = ::open(data_path.c_str(), O_TRUNC | O_CREAT | O_RDWR);
+	else
+		data_fd_ = ::open(data_path.c_str(), O_CREAT | O_RDWR);
+
 	if (data_fd_ < 0) {
 		logger_->Logv("F open data fail\n");
 		return -1;
@@ -44,10 +47,9 @@ int BitcaskDB::open() {
 
 	//var
 	pthread_mutex_init(&lock_, NULL);	
-
-	//TODO recover from data
-	int ret = this->recover(); //recover from redolog(data)	
-	if (ret < 0) {
+	
+	//recover from data
+	if (!trunc && this->recover() < 0) {
 		logger_->Logv("F recover data fail\n");
 		return -1;
 	}
@@ -228,12 +230,10 @@ int BitcaskDB::print_db(uint64_t cnt) {
 		logger_->Logv("F open data in print_db() fail\n");
 		return -1;
 	}
-		
-
-	char read_buf[READ_BUF_SIZE];
 	
 	printf("==begin print db==\n");
 
+	char read_buf[READ_BUF_SIZE];
 	uint64_t cur_cnt = 0;
 	while (cnt == 0 || cur_cnt < cnt ){
 		uint32_t cr = 0;
@@ -268,8 +268,56 @@ int BitcaskDB::print_db(uint64_t cnt) {
 	return 0;
 }
 
+/**
+ * recover from last data file: rebuild mem_dict
+ */ 
 int BitcaskDB::recover() {
-	//TODO
+	uint64_t cur_cnt = 0;
+	
+	while (true){
+		char read_buf[READ_BUF_SIZE];
+		
+		uint32_t cr = 0;
+		uint64_t seq = 0; 
+		size_t klen = 0;
+		size_t vlen = 0;
+
+		uint64_t record_head_len = sizeof(uint32_t)+sizeof(uint64_t)+sizeof(size_t)*2;
+		ssize_t r = read(data_fd_, read_buf, record_head_len);
+		if (r <= 0)
+			break;
+
+		memcpy(&cr, read_buf, sizeof(cr));
+		memcpy(&seq, read_buf+sizeof(uint32_t), sizeof(seq));
+		memcpy(&klen, read_buf+sizeof(uint32_t)+sizeof(uint64_t), sizeof(klen));
+		memcpy(&vlen, read_buf+sizeof(uint32_t)+sizeof(uint64_t)+sizeof(size_t), sizeof(vlen));
+
+		//get key
+		r = read(data_fd_, read_buf, klen);
+		if (r <= 0)
+			break;
+		read_buf[klen] = '\0'; 
+		const char *key = read_buf;
+
+		//jump val
+		lseek(data_fd_, vlen, SEEK_CUR);
+		
+		ValEntry entry;
+		entry.offset = data_offset_;
+		entry.len = klen+vlen+sizeof(size_t)*2+sizeof(uint32_t)+sizeof(uint64_t);
+		data_offset_ += entry.len;
+		seqnum_++;
+
+		uint64_t sign = hash(key, klen);
+		if (vlen == 0)
+			mem_dict_.erase(sign);	
+		else	
+			mem_dict_[sign] = entry;	
+		
+		cur_cnt++;
+	}
+
+	logger_->Logv("N db recover ok\n");
 	return 0;
 }
 

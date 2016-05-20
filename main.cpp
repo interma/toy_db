@@ -24,7 +24,7 @@ void test_util() {
 	char str2[] = "interma123";
 	char str3[] = "interm";
 	char str4[] = "a123";
-	printf("\t?crc of [%s] is %u\n", str, crc(str,strlen(str)));
+	printf("\t?crc of [%s] is %u\n", str2, crc(str2,strlen(str2)));
 	printf("\tlast crc is %u\n", crc(str4,strlen(str4),crc(str3,strlen(str2))) );
 	
 	printf("util test ok\n");
@@ -33,7 +33,7 @@ void test_util() {
 void test_db() {
 	//test db
 	BitcaskDB db("./data/");
-	db.open();
+	db.open(true);
 
 	int ret = 0;	
 	char key1[] = "key1";
@@ -89,10 +89,34 @@ void test_db() {
 	printf("db test ok\n");
 }
 
+void test_db_with_recover() {
+	BitcaskDB db("./data/");
+	db.open(); //no truncate
+	
+	int ret = 0;	
+	char key1[] = "key1";
+	char key2[] = "key2";
+	char val[] = "newinterma";
+	std::string buf;
+	ret = db.get(key1,strlen(key1),&buf);
+	assert(ret == 1);
+	ret = db.get(key2,strlen(key2),&buf);
+	assert(ret == 0);
+	
+	ret = db.set(key2,strlen(key2),val,sizeof(val));
+	ret = db.get(key2,strlen(key2),&buf);
+	assert(ret == 0);
+	assert(strcmp(buf.c_str(),val) == 0);
+
+	db.print_db();
+	printf("db with recover test ok\n");
+}
+
 int main (int argc, char **argv)
 {
 	test_util();
 	test_db();
+	test_db_with_recover();
 
 	return 0;
 }

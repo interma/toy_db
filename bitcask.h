@@ -23,7 +23,10 @@ class BitcaskDB {
 			db_path_(db_path),seqnum_(0),data_offset_(0),data_fd_(-1),logger_(NULL) {};
 		~BitcaskDB();
 		
-		int open();
+		/**
+		 *@param: trunc==true: truncate data file(empyt db)
+		 */ 	
+		int open(bool trunc=false);
 		//int close();
 		
 		/**
