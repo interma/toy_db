@@ -6,3 +6,4 @@ default: all
 
 .PHONY: test
 test:
+	cd output && ./test_db

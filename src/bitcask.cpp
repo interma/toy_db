@@ -36,12 +36,14 @@ int BitcaskDB::open(bool trunc) {
 	string data_path(db_path_);
 	data_path.append("data");	
 	if (trunc)
-		data_fd_ = ::open(data_path.c_str(), O_TRUNC | O_CREAT | O_RDWR);
+		data_fd_ = ::open(data_path.c_str(), O_TRUNC|O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
+		//data_fd_ = ::open(data_path.c_str(), O_TRUNC | O_RDWR);
 	else
-		data_fd_ = ::open(data_path.c_str(), O_CREAT | O_RDWR);
+		data_fd_ = ::open(data_path.c_str(), O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
+		//data_fd_ = ::open(data_path.c_str(), O_CREAT | O_RDWR);
 
 	if (data_fd_ < 0) {
-		logger_->Logv("F open data fail\n");
+		logger_->Logv("F open data[%s] fail\n", data_path.c_str());
 		return -1;
 	}
 

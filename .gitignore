@@ -2,4 +2,6 @@
 *.log
 output/
 main
-data/
+src/*.a
+src/test_db
+test/data/

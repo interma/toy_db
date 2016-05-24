@@ -8,9 +8,11 @@
 #include "util.h"
 #include "bitcask.h"
 
+#define TEST_PATH "../test/"
+
 void test_util() {
 	//test log
-	FILE* f = fopen("main.log", "a");
+	FILE* f = fopen(TEST_PATH"main.log", "a");
 	assert(f != NULL);
 	PosixLogger logger(f);
 	
@@ -32,10 +34,10 @@ void test_util() {
 
 void test_db() {
 	//test db
-	BitcaskDB db("./data/");
-	db.open(true);
+	BitcaskDB db(TEST_PATH"data/");
+	int ret = db.open(true);
+	assert (ret == 0);
 
-	int ret = 0;	
 	char key1[] = "key1";
 	char key2[] = "key2";
 	char key3[] = "key3";
@@ -58,8 +60,8 @@ void test_db() {
 
 	//write big file
 	uint64_t fsize;
-	const char fname[] = "./test/img.png";
-	const char fname_w[] = "./test/img_w.png";
+	const char fname[] = TEST_PATH"img.png";
+	const char fname_w[] = TEST_PATH"img_w.png";
 	ret = GetFileSize(fname, &fsize);
 	assert(ret == 0);
 	printf("\tfile[%s] size[%llu]\n", fname, fsize);
@@ -90,7 +92,7 @@ void test_db() {
 }
 
 void test_db_with_recover() {
-	BitcaskDB db("./data/");
+	BitcaskDB db(TEST_PATH"data/");
 	db.open(); //no truncate
 	
 	int ret = 0;	

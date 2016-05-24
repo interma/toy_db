@@ -6,11 +6,12 @@ INCLUDE_PATH=-I. \
 
 LIB_PATH=-L. -lpthread
 
-OBJ=main
+TEST=test_db
+LIB=libtoydb.a
 
-all : $(OBJ) output;
-$(OBJ) : \
-	main.o \
+all : $(TEST) $(LIB) output;
+$(TEST) : \
+	test_db.o \
 	util.o \
 	murhash2.o \
 	crc32.o \
@@ -18,13 +19,25 @@ $(OBJ) : \
 
 	$(GCC) -o $@ $^  $(INCLUDE_PATH) $(LIB_PATH) 
 
-%.o     : %.cpp
+$(LIB) : \
+	util.o \
+	murhash2.o \
+	crc32.o \
+	bitcask.o \
+
+	ar crv $@ $^
+
+%.o : %.cpp
 	$(GCC) $(CPPFLAGS) -c $< -o $@ $(INCLUDE_PATH)
 
 output :
-	rm -rf output; mkdir -p output ; cp $(OBJ) output
+	rm -rf ../output
+	mkdir -p ../output 
+	cp bitcask.h ../output
+	cp $(LIB) ../output
+	cp $(TEST) ../output
 
 .PHONY: clean 
 clean:
-	rm -fr output;
-	rm -f *.o $(OBJ);
+	rm -f *.o $(TEST) $(LIB);
+	rm -fr ../output;
