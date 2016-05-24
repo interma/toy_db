@@ -3,5 +3,6 @@
 output/
 main
 src/*.a
+src/*.so
 src/test_db
 test/data/

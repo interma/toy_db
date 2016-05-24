@@ -5,9 +5,9 @@ just for fun
 
 * db 
  * operation: get(),set(),del()
- * db model: bitcask   
+ * db model: bitcask(not support hint file yet)
 * python-interface
  * use ctypes for python-binding
-* http ops
+* http interface
  * use tornado support http operation: get/post
 

@@ -323,4 +323,20 @@ int BitcaskDB::recover() {
 	return 0;
 }
 
+//for python ctypes binding
+extern "C" {
+	BitcaskDB* BitcaskDB_new(const char *db_path) { 
+		return new BitcaskDB(db_path); 
+	}
+	int BitcaskDB_open(BitcaskDB *db, bool trunc) {
+		return db->open(trunc);	
+	}
+	void BitcaskDB_print_db(BitcaskDB *db) {
+		db->print_db();
+	}
+	void BitcaskDB_del(BitcaskDB *db) { 
+		delete db; 
+	}
+}
+
 
