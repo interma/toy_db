@@ -1,3 +1,5 @@
+#BitcaskDB python ctypes wrapper
+
 from ctypes import cdll
 lib = cdll.LoadLibrary('../output/libtoydb.so')
 

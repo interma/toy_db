@@ -331,6 +331,10 @@ extern "C" {
 	int BitcaskDB_open(BitcaskDB *db, bool trunc) {
 		return db->open(trunc);	
 	}
+	int BitcaskDB_set(BitcaskDB *db, const char *key, size_t klen, char *val, size_t vlen) {
+		//pointer type wrap?
+			
+	}
 	void BitcaskDB_print_db(BitcaskDB *db) {
 		db->print_db();
 	}
