@@ -333,7 +333,7 @@ extern "C" {
 	}
 	int BitcaskDB_set(BitcaskDB *db, const char *key, size_t klen, char *val, size_t vlen) {
 		//pointer type wrap?
-			
+		return 0;
 	}
 	void BitcaskDB_print_db(BitcaskDB *db) {
 		db->print_db();
