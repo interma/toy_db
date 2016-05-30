@@ -344,7 +344,7 @@ extern "C" {
 		// in C: buffer copy		
 		vlen = string_val.length() < vlen? string_val.length():vlen;
 		memcpy(val, string_val.data(), vlen);
-		return ret;
+		return (int)vlen;
 	}
 	int BitcaskDB_del(BitcaskDB *db, const char *key, size_t klen) {
 		return db->del(key,klen);
