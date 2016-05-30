@@ -332,13 +332,27 @@ extern "C" {
 		return db->open(trunc);	
 	}
 	int BitcaskDB_set(BitcaskDB *db, const char *key, size_t klen, char *val, size_t vlen) {
-		//pointer type wrap?
-		return 0;
+		return db->set(key,klen,val,vlen);
+	}
+	int BitcaskDB_get(BitcaskDB *db, const char *key, size_t klen, char *val, size_t vlen) {
+		std::string string_val;
+		int ret = db->get(key,klen,&string_val);
+		if (ret < 0) {
+			val[0] = '\0';
+			return ret;
+		}
+		// in C: buffer copy		
+		vlen = string_val.length() < vlen? string_val.length():vlen;
+		memcpy(val, string_val.data(), vlen);
+		return ret;
+	}
+	int BitcaskDB_del(BitcaskDB *db, const char *key, size_t klen) {
+		return db->del(key,klen);
 	}
 	void BitcaskDB_print_db(BitcaskDB *db) {
 		db->print_db();
 	}
-	void BitcaskDB_del(BitcaskDB *db) { 
+	void BitcaskDB_destory(BitcaskDB *db) { 
 		delete db; 
 	}
 }
