@@ -10,4 +10,7 @@ just for fun
  * use ctypes for python-binding
 * http interface
  * use tornado support http operation: get/post
+* multi instance support (TODO)
+ * proxy, HA
+ * slave 
 
