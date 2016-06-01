@@ -1,7 +1,9 @@
 #BitcaskDB python ctypes wrapper
 
+import os
 from ctypes import *
-lib = cdll.LoadLibrary('../output/libtoydb.so')
+file_path = os.path.split(os.path.realpath(__file__))[0]+"/"
+lib = cdll.LoadLibrary(file_path+'../output/libtoydb.so')
 
 class BitcaskDB(object):
 	def __init__(self, db_path):
@@ -30,17 +32,17 @@ class BitcaskDB(object):
 
 #test wrapper	
 if __name__ == "__main__":
-	db = BitcaskDB('../test/data/')
+	db = BitcaskDB(file_path+'../test/data/')
 	db.open(False)
 	ret = db.set("keypy", "xxx")
-	img_data = open("../test/img.png").read()
+	img_data = open(file_path+"../test/img.png").read()
 	ret = db.set("imgpy", img_data)
 	key = "keypy"
 	print "GET[%s]:%s" % (key,db.get(key))
 	key = "imgpy"
 	print "GET[%s]:%d" % ( key,len(db.get(key,1024*1024)) )
 	ret = db.dele("keypy")
-	#db.print_db()
+	db.print_db()
 	db.destory()
 
 # vim:noet:ts=4:sw=4:

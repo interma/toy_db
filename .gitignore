@@ -1,5 +1,6 @@
 *.o
 *.log
+*.pyc
 output/
 main
 src/*.a

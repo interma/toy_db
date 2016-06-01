@@ -116,9 +116,22 @@ void test_db_with_recover() {
 
 int main (int argc, char **argv)
 {
-	test_util();
-	test_db();
-	test_db_with_recover();
+	if (argc <= 1) {
+		//just test
+		test_util();
+		test_db();
+		test_db_with_recover();
+		return 0;
+	}
+	char *cmd = argv[1];
+	if (strcmp(cmd,"print") == 0) {
+		char db_path[128];
+		snprintf(db_path, sizeof(db_path), "%s/", argv[2]);
+		BitcaskDB db(db_path);
+		db.open(); //no truncate
+		db.print_db();
+	}
 
 	return 0;
 }
+
